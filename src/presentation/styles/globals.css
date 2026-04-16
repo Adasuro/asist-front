@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a; /* Slate 900 para máxima legibilidad */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #475569; /* Slate 600 */
+  --accent: #eff6ff;    /* Blue 50 para el lado derecho */
+  --border: #cbd5e1;    /* Slate 300 */
+  --input-bg: #ffffff;
+  --text-muted: #64748b;
+  --text-dark: #1e3a8a;
+}
+
+/* Forzamos que el login siempre sea claro si el usuario lo pide todo blanco */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --input-bg: #ffffff;
+    --border: #cbd5e1;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer components {
+  /* Layout del Login */
+  .login-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #ffffff;
+  }
+
+  .login-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0 10%;
+    background-color: #ffffff; /* Blanco absoluto */
+    position: relative;
+  }
+
+  /* Eliminamos el patrón de puntos que ensuciaba el fondo */
+  .login-left::after {
+    display: none;
+  }
+
+  .login-right {
+    flex: 1.2;
+    background-color: var(--accent);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+  }
+
+  /* La curva que une los dos lados */
+  .login-right::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150px;
+    width: 300px;
+    height: 100%;
+    background-color: #ffffff;
+    border-top-right-radius: 1000px;
+    border-bottom-right-radius: 1000px;
+    z-index: -1;
+  }
+
+  /* Tipografía */
+  .login-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.025em;
+  }
+
+  .login-subtitle {
+    font-size: 1.125rem;
+    color: var(--secondary);
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+
+  /* Formulario e Inputs */
+  .form-group {
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .login-input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3.5rem; /* Ajustado para el icono */
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: var(--input-bg);
+    color: #0f172a; /* Texto oscuro garantizado */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Asegurar que el placeholder sea visible pero sutil */
+  .login-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+  }
+
+  .login-input:hover {
+    border-color: #94a3b8;
+  }
+
+  .login-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    background-color: #ffffff;
+  }
+
+  .login-input:focus + .input-icon {
+    color: var(--primary);
+  }
+
+  .forgot-password {
+    color: var(--primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 2.5rem;
+    transition: color 0.2s;
+  }
+
+  .forgot-password:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+  }
+
+  /* Botón Principal */
+  .custom-button {
+    width: 100%;
+    max-width: 420px;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .custom-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+  }
+
+  .custom-button:active {
+    transform: translateY(0);
+  }
+
+  /* Logo y Círculo */
+  .logo-circulo {
+    background-color: #ffffff;
+    padding: 2.5rem;
+    border-radius: 50%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+}
