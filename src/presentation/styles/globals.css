@@ -38,15 +38,17 @@ body {
   }
 
   .login-left {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 0 10%;
-    background-color: #ffffff; /* Blanco absoluto */
-    position: relative;
-  }
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 10%;
+  background-color: #ffffff;
+  /* Crea un patrón de puntos sutil */
+  background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+  background-size: 20px 20px; /* Controla qué tan separados están los puntos */
+}
 
   /* Eliminamos el patrón de puntos que ensuciaba el fondo */
   .login-left::after {
@@ -80,18 +82,19 @@ body {
 
   /* Tipografía */
   .login-title {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     font-weight: 800;
     color: var(--text-dark);
     margin-bottom: 0.75rem;
     letter-spacing: -0.025em;
+    line-height: 1.2;
   }
 
   .login-subtitle {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     color: var(--secondary);
-    margin-bottom: 3rem;
-    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    line-height: 1.5;
   }
 
   /* Formulario e Inputs */
@@ -111,6 +114,9 @@ body {
     font-size: 1.25rem;
     pointer-events: none;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .login-input {
@@ -127,12 +133,12 @@ body {
 
   /* Asegurar que el placeholder sea visible pero sutil */
   .login-input::placeholder {
-    color: #94a3b8;
+    color: #b5c9e9;
     font-weight: 400;
   }
 
   .login-input:hover {
-    border-color: #94a3b8;
+    border-color: #99abc4;
   }
 
   .login-input:focus {
@@ -187,15 +193,56 @@ body {
     transform: translateY(0);
   }
 
-  /* Logo y Círculo */
+  /* Ilustración y Logo (Lado Derecho) */
+  .illustration-placeholder {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    color: var(--text-dark);
+  }
+
   .logo-circulo {
     background-color: #ffffff;
-    padding: 2.5rem;
+    padding: 1rem;
     border-radius: 50%;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
+    width: 550px;
+    height: 520px;
+  }
+
+  .illustration-title {
+    font-weight: 800;
+    font-size: 1.5rem;
+    margin: 1.5rem 0 0.5rem 0;
+    letter-spacing: 0.05em;
+    color: var(--text-dark);
+  }
+
+  .illustration-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.8;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+    color: var(--text-dark);
   }
 }
+
+.logo-circulo img {
+    /* Nombre de la animación | duración | suavidad | infinita */
+    animation: levitacion 3s ease-in-out infinite;
+}
+
+@keyframes levitacion {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px); /* Sube 10px */
+    }
+}
+
+
