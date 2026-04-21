@@ -21,15 +21,13 @@ export default function LoginPage() {
       {/* Lado Derecho - El Diseño Azul y Curvo */}
       <div className="login-right">
         <div className="illustration-placeholder">
-          {/* Contenedor circular para que tu logo resalte */}
           <div className="logo-circulo">
              <Image 
               src="/Logo_principal.png" 
               alt="Logo Lucecitas del Saber"
-              width={550} 
+              width={520} 
               height={520}
               priority
-              style={{ objectFit: 'contain' }}
             />
           </div>
           <p className="illustration-title">
@@ -40,7 +38,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-
     </div>
   );
 }
