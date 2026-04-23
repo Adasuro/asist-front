@@ -2,6 +2,7 @@
 
 import { 
   createAuxiliar as createAuxiliarRepo, 
+  updateAuxiliar as updateAuxiliarRepo,
   toggleAuxiliarStatus as toggleRepo, 
   updateAuxiliarPassword as updatePasswordRepo 
 } from '@/infrastructure/admin/admin.repository'
@@ -19,6 +20,26 @@ export async function createAuxiliarAction(formData: FormData) {
     email,
     dni,
     password,
+    grado_id
+  })
+
+  if (!result.error) {
+    revalidatePath('/dashboard/auxiliares')
+  }
+
+  return result
+}
+
+export async function updateAuxiliarAction(id: string, formData: FormData) {
+  const nombre_completo = formData.get('nombre_completo') as string
+  const email = formData.get('email') as string
+  const dni = formData.get('dni') as string
+  const grado_id = formData.get('grado_id') as string
+
+  const result = await updateAuxiliarRepo(id, {
+    nombre_completo,
+    email,
+    dni,
     grado_id
   })
 

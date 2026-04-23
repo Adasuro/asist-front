@@ -12,8 +12,9 @@ import {
 } from 'lucide-react'
 import { toggleAuxiliarStatusAction } from '@/application/admin/admin.actions'
 import { ChangePasswordModal } from './ChangePasswordModal'
+import { EditAuxiliarModal } from './EditAuxiliarModal'
 
-export function AuxiliarList({ auxiliaries }: { auxiliaries: any[] }) {
+export function AuxiliarList({ auxiliaries, grados }: { auxiliaries: any[], grados: any[] }) {
   const [loading, setLoading] = useState<string | null>(null)
 
   const handleToggleStatus = async (id: string) => {
@@ -80,6 +81,7 @@ export function AuxiliarList({ auxiliaries }: { auxiliaries: any[] }) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
+                    <EditAuxiliarModal auxiliar={aux} grados={grados} />
                     <ChangePasswordModal auxiliaryId={aux.id} name={aux.nombre_completo} />
                     
                     <button 
