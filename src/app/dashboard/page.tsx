@@ -1,7 +1,8 @@
 import { getCurrentUser } from '@/infrastructure/auth/auth.repository'
-import { getAssignedSections, getTotalCounts } from '@/infrastructure/attendance/sections.repository'
+import { getAssignedSections } from '@/infrastructure/attendance/sections.repository'
 import { logoutAction } from '@/application/auth/logout.action'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { 
   Users, 
@@ -22,25 +23,44 @@ import {
 export default async function DashboardPage() {
   const user = await getCurrentUser()
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  const { profile } = user
-
-  if (!profile) {
+  if (!user || !user.profile) {
     return (
-      <div className="p-8 text-center">
-        <h1 className="text-xl font-bold text-red-600">Perfil no encontrado</h1>
-        <p>Contacta al administrador del sistema.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-red-100">
+          <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+            <AlertTriangle size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-gray-800 mb-2">Acceso No Autorizado</h1>
+          <p className="text-gray-500 mb-6 text-sm">No hemos podido validar tu perfil de usuario. Por favor, intenta iniciar sesión nuevamente.</p>
+          <form action={logoutAction}>
+            <button className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all">
+              Volver al Login
+            </button>
+          </form>
+        </div>
       </div>
     )
   }
 
+  const { profile } = user
+
   const isSuper = profile.rol === 'superusuario'
   
-  // Cargar datos reales según el rol
-  const counts = isSuper ? await getTotalCounts() : null
+  // Cargar estadísticas reales desde el nuevo endpoint
+  const counts = await (async () => {
+    try {
+      const cookieStore = await cookies()
+      const token = cookieStore.get('auth_token')?.value
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stats/counts`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      })
+      return await response.json()
+    } catch (e) {
+      return { estudiantes: 0, secciones: 0, alertas: 0 }
+    }
+  })()
+
   const misSecciones = !isSuper ? await getAssignedSections(user.id) : []
 
   return (
@@ -71,23 +91,12 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Grid de Accesos Rápidos */}
+      {/* Grid de Accesos Rápidos con Datos Reales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {isSuper ? (
-          <>
-            <QuickStat title="Total Estudiantes" value={counts?.estudiantes || 0} icon={<Users size={24} />} color="blue" />
-            <QuickStat title="Secciones Activas" value={counts?.secciones || 0} icon={<School size={24} />} color="green" />
-            <QuickStat title="Alertas Hoy" value={counts?.alertas || 0} icon={<AlertTriangle size={24} />} color="yellow" />
-            <QuickStat title="Asistencia Global" value="0%" icon={<BarChart3 size={24} />} color="purple" />
-          </>
-        ) : (
-          <>
-            <QuickStat title="Mis Secciones" value={misSecciones.length} icon={<School size={24} />} color="blue" />
-            <QuickStat title="Total Alumnos" value="-" icon={<Users size={24} />} color="green" />
-            <QuickStat title="Alertas de mi área" value="0" icon={<AlertTriangle size={24} />} color="yellow" />
-            <QuickStat title="Faltas sin Justificar" value="0" icon={<FileText size={24} />} color="red" />
-          </>
-        )}
+        <QuickStat title={isSuper ? "Total Estudiantes" : "Mis Alumnos"} value={counts?.estudiantes || 0} icon={<Users size={24} />} color="blue" />
+        <QuickStat title={isSuper ? "Secciones Activas" : "Mis Secciones"} value={counts?.secciones || 0} icon={<School size={24} />} color="green" />
+        <QuickStat title="Alertas Hoy" value={counts?.alertas || 0} icon={<AlertTriangle size={24} />} color="yellow" />
+        <QuickStat title="Asistencia Global" value="0%" icon={<BarChart3 size={24} />} color="purple" />
       </div>
 
       {/* Main Content Areas */}
