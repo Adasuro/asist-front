@@ -54,6 +54,21 @@ export const createAuxiliar = async (data: any) => {
   }
 }
 
+export const updateAuxiliar = async (id: string, data: any) => {
+  try {
+    const response = await fetch(`${API_URL}/admin/auxiliaries/${id}`, {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
+    const result = await response.json()
+    if (!response.ok) return { error: result.message || 'Error al actualizar auxiliar' }
+    return { data: result }
+  } catch (error) {
+    return { error: 'No se pudo conectar con el servidor' }
+  }
+}
+
 export const toggleAuxiliarStatus = async (id: string) => {
   try {
     const response = await fetch(`${API_URL}/admin/auxiliaries/${id}/toggle`, {

@@ -54,7 +54,7 @@ export default async function AuxiliaresPage() {
           <p className="text-sm text-gray-500">Total de auxiliares registrados: {auxiliaries.length}</p>
         </div>
         
-        <AuxiliarList auxiliaries={auxiliaries} />
+        <AuxiliarList auxiliaries={auxiliaries} grados={grados} />
       </div>
     </div>
   )

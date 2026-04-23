@@ -7,10 +7,14 @@ export async function loginAction(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await loginWithEmail(email, password)
+  try {
+    const { error } = await loginWithEmail(email, password)
 
-  if (error) {
-    return { error: error.message }
+    if (error) {
+      return { error: error.message }
+    }
+  } catch (err: any) {
+    return { error: 'Error inesperado en el servidor' }
   }
 
   redirect('/dashboard')
