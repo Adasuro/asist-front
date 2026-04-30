@@ -172,7 +172,11 @@ export default function StudentsPage() {
         </div>
 
         {/* Students Table */}
-        <StudentTable students={students} loading={loading} />
+        <StudentTable 
+          students={students} 
+          loading={loading} 
+          onRefresh={fetchStudents}
+        />
 
         {/* Pagination */}
         <div className="flex justify-between items-center bg-white p-4 rounded-xl border text-sm text-gray-500 shadow-sm">

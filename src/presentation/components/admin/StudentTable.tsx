@@ -1,9 +1,11 @@
 "use client"
 
-import React from 'react'
-import { User, Phone, MapPin, Calendar, Hash, Eye } from 'lucide-react'
+import React, { useState } from 'react'
+import { User, Phone, MapPin, Calendar, Hash, Eye, Edit, Trash2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import EditStudentModal from './EditStudentModal'
+import { deleteStudentAction } from '@/application/students/student.actions'
 
 interface Student {
   id: string
@@ -13,15 +15,41 @@ interface Student {
   telefono: string
   direccion: string
   fecha_nacimiento: string
+  seccion_id: string
   seccion: {
     nombre: string
     grado: {
+      id: string
       nombre: string
     }
   }
 }
 
-export default function StudentTable({ students, loading }: { students: Student[], loading: boolean }) {
+export default function StudentTable({ 
+  students, 
+  loading, 
+  onRefresh 
+}: { 
+  students: Student[], 
+  loading: boolean,
+  onRefresh: () => void 
+}) {
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`¿Estás seguro de eliminar al estudiante ${name}? Esta acción no se puede deshacer.`)) {
+      setDeletingId(id)
+      const result = await deleteStudentAction(id)
+      if (result.error) {
+        alert(result.error)
+      } else {
+        onRefresh()
+      }
+      setDeletingId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="w-full h-64 flex items-center justify-center">
@@ -89,15 +117,42 @@ export default function StudentTable({ students, loading }: { students: Student[
                   </p>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="sm" leftIcon={<Eye size={16} />}>
-                    Ficha
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      title="Editar"
+                      onClick={() => setEditingStudent(student)}
+                    >
+                      <Edit size={16} className="text-blue-600" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      title="Eliminar"
+                      isLoading={deletingId === student.id}
+                      onClick={() => handleDelete(student.id, student.nombre_completo)}
+                    >
+                      <Trash2 size={16} className="text-red-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" leftIcon={<Eye size={16} />}>
+                      Ficha
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {editingStudent && (
+        <EditStudentModal 
+          student={editingStudent}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={onRefresh}
+        />
+      )}
     </div>
   )
 }

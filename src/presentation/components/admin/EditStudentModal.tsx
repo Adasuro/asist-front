@@ -5,6 +5,8 @@ import { X, User, Hash, Phone, MapPin, Calendar, Check } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
+import { updateStudentAction } from '@/application/students/student.actions'
+import { HttpClient } from '@/infrastructure/api/http-client'
 
 interface Grado {
   id: string
@@ -12,13 +14,12 @@ interface Grado {
   secciones: { id: string, nombre: string }[]
 }
 
-import { createStudentAction } from '@/application/students/student.actions'
-import { HttpClient } from '@/infrastructure/api/http-client'
-
-export default function CreateStudentModal({ 
+export default function EditStudentModal({ 
+  student,
   onClose, 
   onSuccess 
 }: { 
+  student: any,
   onClose: () => void, 
   onSuccess: () => void 
 }) {
@@ -27,15 +28,14 @@ export default function CreateStudentModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Form state
   const [formData, setFormData] = useState({
-    nombre_completo: '',
-    dni: '',
-    grado_id: '',
-    seccion_id: '',
-    fecha_nacimiento: '',
-    telefono: '',
-    direccion: ''
+    nombre_completo: student.nombre_completo,
+    dni: student.dni,
+    grado_id: student.seccion.grado.id,
+    seccion_id: student.seccion_id,
+    fecha_nacimiento: student.fecha_nacimiento || '',
+    telefono: student.telefono || '',
+    direccion: student.direccion || ''
   })
 
   useEffect(() => {
@@ -45,9 +45,8 @@ export default function CreateStudentModal({
   const fetchGrados = async () => {
     setLoadingGrados(true)
     try {
-      // Usar el HttpClient para obtener grados (ya configurado para servidor/cliente)
       const data = await HttpClient.get<Grado[]>('/grados')
-      setGrados(data)
+      setGrados(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error("Error al cargar grados:", err)
     } finally {
@@ -61,10 +60,8 @@ export default function CreateStudentModal({
     setError(null)
 
     try {
-      const result = await createStudentAction(formData)
-
+      const result = await updateStudentAction(student.id, formData)
       if (result.error) throw new Error(result.error)
-
       onSuccess()
       onClose()
     } catch (err: any) {
@@ -85,9 +82,9 @@ export default function CreateStudentModal({
           <div>
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <User className="text-blue-600" size={24} />
-              Registro Manual de Alumno
+              Editar Estudiante
             </h2>
-            <p className="text-sm text-gray-500">Ingresa los datos personales y académicos.</p>
+            <p className="text-sm text-gray-500">Actualiza la información de {student.nombre_completo}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <X size={24} />
@@ -105,7 +102,6 @@ export default function CreateStudentModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Información Personal</h3>
-              
               <Input 
                 label="Nombre Completo"
                 required
@@ -114,7 +110,6 @@ export default function CreateStudentModal({
                 value={formData.nombre_completo}
                 onChange={e => setFormData({...formData, nombre_completo: e.target.value})}
               />
-
               <Input 
                 label="DNI"
                 required
@@ -124,7 +119,6 @@ export default function CreateStudentModal({
                 value={formData.dni}
                 onChange={e => setFormData({...formData, dni: e.target.value})}
               />
-
               <Input 
                 label="Fecha de Nacimiento"
                 type="date"
@@ -136,7 +130,6 @@ export default function CreateStudentModal({
 
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Asignación Académica</h3>
-              
               <div className="grid grid-cols-2 gap-3">
                 <Select 
                   label="Grado"
@@ -145,7 +138,6 @@ export default function CreateStudentModal({
                   value={formData.grado_id}
                   onChange={e => setFormData({...formData, grado_id: e.target.value, seccion_id: ''})}
                 />
-
                 <Select 
                   label="Sección"
                   required
@@ -155,7 +147,6 @@ export default function CreateStudentModal({
                   onChange={e => setFormData({...formData, seccion_id: e.target.value})}
                 />
               </div>
-
               <Input 
                 label="Teléfono (Opcional)"
                 placeholder="999888777"
@@ -163,7 +154,6 @@ export default function CreateStudentModal({
                 value={formData.telefono}
                 onChange={e => setFormData({...formData, telefono: e.target.value})}
               />
-
               <Input 
                 label="Dirección (Opcional)"
                 placeholder="Av. Ejemplo 123"
@@ -175,21 +165,11 @@ export default function CreateStudentModal({
           </div>
 
           <div className="mt-8 flex gap-3">
-            <Button 
-              type="button"
-              variant="tertiary"
-              className="flex-1"
-              onClick={onClose}
-            >
+            <Button type="button" variant="tertiary" className="flex-1" onClick={onClose}>
               Cancelar
             </Button>
-            <Button 
-              type="submit"
-              isLoading={submitting}
-              className="flex-1"
-              leftIcon={<Check size={20} />}
-            >
-              Guardar Alumno
+            <Button type="submit" isLoading={submitting} className="flex-1" leftIcon={<Check size={20} />}>
+              Actualizar Alumno
             </Button>
           </div>
         </form>
