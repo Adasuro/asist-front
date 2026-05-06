@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useTransition } from 'react';
-import { User, Lock, Eye, EyeOff, CheckCircle, Circle } from 'lucide-react';
-import Input from './ui/Input';
-import Button from './ui/Button';
+import { User, Lock, Eye, EyeOff, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { Input } from './ui/Input';
+import { Button } from './ui/Button';
 import { loginAction } from '@/application/auth/login.action';
 
 const LoginForm: React.FC = () => {
@@ -40,58 +40,72 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
       {error && (
-        <div className="error-message" style={{ color: 'red', marginBottom: '10px', fontSize: '0.8rem' }}>
+        <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+          <AlertCircle size={14} />
           {error}
         </div>
       )}
 
       <Input 
         type="email" 
-        placeholder="Correo electrónico" 
-        icon={<User size={20} />}
+        label="Correo Electrónico"
+        placeholder="ejemplo@correo.com" 
+        leftIcon={<User size={18} />}
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
         required
       />
 
-      <Input 
-        type={showPassword ? "text" : "password"} 
-        placeholder="Contraseña" 
-        icon={<Lock size={20} />}
-        rightIcon={
-          <span onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </span>
-        }
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-
-      {/* Password Feedback */}
-      <div className="password-feedback" style={{ fontSize: '0.75rem', marginBottom: '15px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-          <p style={{ color: hasMinLength ? '#4caf50' : '#888', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {hasMinLength ? <CheckCircle size={14} /> : <Circle size={14} />} 8+ caracteres
-          </p>
-          <p style={{ color: hasUppercase ? '#4caf50' : '#888', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {hasUppercase ? <CheckCircle size={14} /> : <Circle size={14} />} Una mayúscula
-          </p>
-          <p style={{ color: hasNumber ? '#4caf50' : '#888', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {hasNumber ? <CheckCircle size={14} /> : <Circle size={14} />} Un número
-          </p>
-          <p style={{ color: hasSpecialChar ? '#4caf50' : '#888', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {hasSpecialChar ? <CheckCircle size={14} /> : <Circle size={14} />} Carácter especial
-          </p>
-        </div>
+      <div className="relative group">
+        <Input 
+          type={showPassword ? "text" : "password"} 
+          label="Contraseña"
+          placeholder="••••••••" 
+          leftIcon={<Lock size={18} />}
+          value={password}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-[34px] p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
       </div>
 
-      <a href="#" className="forgot-password">¿Olvidaste tu contraseña?</a>
+      {/* Password Feedback */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 py-2">
+        <p className={`text-[11px] flex items-center gap-1.5 font-medium transition-colors ${hasMinLength ? 'text-green-600' : 'text-gray-400'}`}>
+          {hasMinLength ? <CheckCircle size={12} /> : <Circle size={12} />} 8+ caracteres
+        </p>
+        <p className={`text-[11px] flex items-center gap-1.5 font-medium transition-colors ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}>
+          {hasUppercase ? <CheckCircle size={12} /> : <Circle size={12} />} Una mayúscula
+        </p>
+        <p className={`text-[11px] flex items-center gap-1.5 font-medium transition-colors ${hasNumber ? 'text-green-600' : 'text-gray-400'}`}>
+          {hasNumber ? <CheckCircle size={12} /> : <Circle size={12} />} Un número
+        </p>
+        <p className={`text-[11px] flex items-center gap-1.5 font-medium transition-colors ${hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}>
+          {hasSpecialChar ? <CheckCircle size={12} /> : <Circle size={12} />} Carácter especial
+        </p>
+      </div>
 
-      <Button type="submit" disabled={!isValid || isPending}>
-        {isPending ? 'Ingresando...' : 'Iniciar Sesión'}
+      <div className="flex justify-end">
+        <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline transition-all">
+          ¿Olvidaste tu contraseña?
+        </a>
+      </div>
+
+      <Button 
+        type="submit" 
+        disabled={!isValid} 
+        isLoading={isPending}
+        className="w-full h-12 text-sm"
+      >
+        Iniciar Sesión
       </Button>
     </form>
   );

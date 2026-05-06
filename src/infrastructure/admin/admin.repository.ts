@@ -27,7 +27,7 @@ export const getAuxiliaries = async () => {
 
 export const getGrados = async () => {
   try {
-    const response = await fetch(`${API_URL}/admin/grados`, {
+    const response = await fetch(`${API_URL}/grados`, {
       headers: await getAuthHeaders(),
       cache: 'no-store',
     })
