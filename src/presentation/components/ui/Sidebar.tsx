@@ -57,7 +57,7 @@ const navItems: NavItem[] = [
     title: 'Asistencia',
     href: '/dashboard/asistencia',
     icon: <ClipboardCheck size={20} />,
-    roles: ['auxiliar']
+    roles: ['superusuario', 'auxiliar']
   },
   {
     title: 'Justificaciones',
@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
     title: 'Reportes',
     href: '/dashboard/reportes',
     icon: <TrendingUp size={20} />,
-    roles: ['superusuario']
+    roles: ['superusuario', 'auxiliar']
   },
   {
     title: 'Calendario',
@@ -81,7 +81,7 @@ const navItems: NavItem[] = [
     title: 'Alertas',
     href: '/dashboard/alertas',
     icon: <AlertTriangle size={20} />,
-    roles: ['superusuario']
+    roles: ['superusuario', 'auxiliar']
   }
 ]
 
