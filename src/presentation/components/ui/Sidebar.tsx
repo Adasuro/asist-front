@@ -42,6 +42,12 @@ const navItems: NavItem[] = [
     roles: ['superusuario', 'auxiliar']
   },
   {
+    title: 'Mi Perfil',
+    href: '/dashboard/profile',
+    icon: <UserCircle size={20} />,
+    roles: ['superusuario', 'auxiliar']
+  },
+  {
     title: 'Gestión de Auxiliares',
     href: '/dashboard/auxiliares',
     icon: <Users size={20} />,

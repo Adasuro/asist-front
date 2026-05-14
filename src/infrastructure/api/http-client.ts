@@ -37,8 +37,8 @@ export class HttpClient {
   }
 
   static async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const headers = await this.getAuthHeaders()
-    const { params, ...restOptions } = options
+    const authHeaders = await this.getAuthHeaders()
+    const { params, body, ...restOptions } = options
 
     let url = `${API_URL}${endpoint}`
     if (params) {
@@ -46,8 +46,15 @@ export class HttpClient {
       url += `?${searchParams.toString()}`
     }
 
+    // Si el body es FormData, el navegador debe establecer el Content-Type con el boundary
+    const headers: Record<string, string> = { ...authHeaders }
+    if (body instanceof FormData) {
+      delete headers['Content-Type']
+    }
+
     const response = await fetch(url, {
       ...restOptions,
+      body,
       headers: {
         ...headers,
         ...restOptions.headers,
@@ -59,8 +66,14 @@ export class HttpClient {
       throw new Error(errorData.message || errorData.error || 'Error en la petición')
     }
 
-    const contentType = response.headers.get('content-type')
-    if (contentType && (contentType.includes('text/csv') || contentType.includes('application/octet-stream'))) {
+    const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+    if (
+      contentType.includes('application/pdf') ||
+      contentType.includes('application/vnd.ms-excel') ||
+      contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
+      contentType.includes('application/octet-stream') ||
+      contentType.includes('text/csv')
+    ) {
       return response.blob() as unknown as T
     }
 

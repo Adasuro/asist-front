@@ -1,20 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
-  TrendingUp, 
-  Download, 
-  BarChart2, 
-  PieChart, 
-  Calendar as CalendarIcon,
-  Filter,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  FileText,
-  Search,
-  User
-} from 'lucide-react'
+import { TrendingUp, Download, BarChart2, PieChart, Calendar as CalendarIcon, Filter, CheckCircle2, Clock, AlertCircle, FileText, Search, User, FileSpreadsheet } from 'lucide-react'
 import { HttpClient } from '@/infrastructure/api/http-client'
 import { Button } from '@/presentation/components/ui/Button'
 import { Select } from '@/presentation/components/ui/Select'
@@ -22,6 +9,7 @@ import { Select } from '@/presentation/components/ui/Select'
 export default function ReportesPage() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState<string | null>(null)
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
   const [fechaFin, setFechaFin] = useState(new Date().toISOString().split('T')[0])
   const [estudianteNombre, setEstudianteNombre] = useState('')
@@ -63,6 +51,34 @@ export default function ReportesPage() {
     }
   }
 
+  const handleExport = async (type: 'pdf' | 'excel') => {
+    setExporting(type)
+    try {
+      const params: any = { 
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        estudiante_nombre: estudianteNombre
+      }
+      if (seccionId) params.seccion_id = seccionId
+      
+      const endpoint = type === 'pdf' ? '/reports/export-pdf' : '/reports/export-excel'
+      const blob = await HttpClient.get<Blob>(endpoint, params)
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Reporte_Asistencia_${new Date().getTime()}.${type === 'pdf' ? 'pdf' : 'xlsx'}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Error al exportar el reporte')
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const seccionOptions = secciones.map(s => ({ 
     value: s.id, 
     label: `${s.grado.nombre} - ${s.nombre}` 
@@ -76,7 +92,20 @@ export default function ReportesPage() {
           <p className="text-gray-500">Visualización detallada de puntualidad y faltas</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="tertiary" leftIcon={<Download size={18} />}>
+          <Button 
+            variant="secondary" 
+            leftIcon={<FileSpreadsheet size={18} />}
+            onClick={() => handleExport('excel')}
+            loading={exporting === 'excel'}
+          >
+            Exportar Excel
+          </Button>
+          <Button 
+            variant="tertiary" 
+            leftIcon={<Download size={18} />}
+            onClick={() => handleExport('pdf')}
+            loading={exporting === 'pdf'}
+          >
             Exportar PDF
           </Button>
         </div>
