@@ -48,3 +48,30 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
     return null;
   }
 }
+
+export const updateProfile = async (data: any) => {
+  try {
+    const response = await HttpClient.post<any>('/profile', data)
+    return { data: response.user, error: null }
+  } catch (error: any) {
+    return { data: null, error: error.message }
+  }
+}
+
+export const updateProfilePhoto = async (formData: FormData) => {
+  try {
+    const response = await HttpClient.post<any>('/profile/photo', formData)
+    return { data: response, error: null }
+  } catch (error: any) {
+    return { data: null, error: error.message }
+  }
+}
+
+export const updateMyPassword = async (data: any) => {
+  try {
+    const response = await HttpClient.patch<any>('/profile/password', data)
+    return { data: response, error: null }
+  } catch (error: any) {
+    return { data: null, error: error.message }
+  }
+}
