@@ -26,11 +26,11 @@ interface Student {
 }
 
 export default function StudentTable({ 
-  students, 
+  students = [], 
   loading, 
   onRefresh 
 }: { 
-  students: Student[], 
+  students?: Student[], 
   loading: boolean,
   onRefresh: () => void 
 }) {
@@ -58,7 +58,7 @@ export default function StudentTable({
     )
   }
 
-  if (students.length === 0) {
+  if (!students || students.length === 0) {
     return (
       <div className="bg-white rounded-xl p-12 text-center border shadow-sm">
         <User className="mx-auto text-gray-300 mb-4" size={48} />
