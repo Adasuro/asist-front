@@ -57,7 +57,7 @@ export const createAuxiliar = async (data: any) => {
 export const updateAuxiliar = async (id: string, data: any) => {
   try {
     const response = await fetch(`${API_URL}/admin/auxiliaries/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: await getAuthHeaders(),
       body: JSON.stringify(data),
     })

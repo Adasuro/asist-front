@@ -241,37 +241,45 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {!status.record ? (
-                                                    <>
-                                                        <Button size="sm" variant="secondary" onClick={() => handleManualRegister(student.id, 'presente')}>
-                                                            P
-                                                        </Button>
-                                                        <Button size="sm" variant="tertiary" onClick={() => handleManualRegister(student.id, 'tardanza')}>
-                                                            T
-                                                        </Button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        {status.record.estado !== 'presente' && !status.record.justificacion && (
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="tertiary" 
-                                                                className="text-blue-600 hover:bg-blue-50"
-                                                                onClick={() => setJustifyingAttendance(status.record)}
-                                                                leftIcon={<ShieldCheck size={14} />}
-                                                            >
-                                                                Justificar
-                                                            </Button>
-                                                        )}
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="tertiary" 
-                                                            onClick={() => handleManualRegister(student.id, status.record.estado === 'presente' ? 'tardanza' : 'presente')}
-                                                        >
-                                                            Editar
-                                                        </Button>
-                                                    </>
+                                            <div className="flex justify-end gap-1">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant={status.record?.estado === 'presente' ? 'primary' : 'tertiary'}
+                                                    onClick={() => handleManualRegister(student.id, 'presente')}
+                                                    title="Presente"
+                                                    className="w-8 h-8 p-0"
+                                                >
+                                                    P
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant={status.record?.estado === 'tardanza' ? 'secondary' : 'tertiary'}
+                                                    onClick={() => handleManualRegister(student.id, 'tardanza')}
+                                                    title="Tardanza"
+                                                    className="w-8 h-8 p-0"
+                                                >
+                                                    T
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant={(!status.record || status.record?.estado === 'falta') ? 'danger' : 'tertiary'}
+                                                    onClick={() => handleManualRegister(student.id, 'falta')}
+                                                    title="Falta"
+                                                    className={`w-8 h-8 p-0 ${(!status.record || status.record?.estado === 'falta') ? 'bg-red-600 text-white hover:bg-red-700' : ''}`}
+                                                >
+                                                    F
+                                                </Button>
+
+                                                {status.record && status.record.estado !== 'presente' && !status.record.justificacion && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="tertiary" 
+                                                        className="text-blue-600 hover:bg-blue-50 ml-2"
+                                                        onClick={() => setJustifyingAttendance(status.record)}
+                                                        title="Justificar"
+                                                    >
+                                                        <ShieldCheck size={16} />
+                                                    </Button>
                                                 )}
                                             </div>
                                         </td>

@@ -92,8 +92,8 @@ export default function StudentsPage() {
   const isSuper = userRole === 'superusuario'
   const selectedGrado = grados.find(g => g.id === gradoId)
   
-  const gradoOptions = grados.map(g => ({ value: g.id, label: g.nombre }))
-  const seccionOptions = selectedGrado?.secciones.map(s => ({ value: s.id, label: s.nombre })) || []
+  const gradoOptions = (grados || []).map(g => ({ value: g.id, label: g.nombre }))
+  const seccionOptions = selectedGrado?.secciones?.map(s => ({ value: s.id, label: s.nombre })) || []
 
   const handleDownloadTemplate = async () => {
     try {

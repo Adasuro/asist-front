@@ -47,7 +47,7 @@ export default function CreateStudentModal({
     try {
       // Usar el HttpClient para obtener grados (ya configurado para servidor/cliente)
       const data = await HttpClient.get<Grado[]>('/grados')
-      setGrados(data)
+      setGrados(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error("Error al cargar grados:", err)
     } finally {
