@@ -16,28 +16,39 @@ import {
   Clock,
   MoreVertical,
   ShieldCheck,
-  FileText
+  FileText,
+  Lock,
+  Unlock,
+  AlertTriangle,
+  RefreshCcw,
+  Calendar,
+  Info
 } from 'lucide-react'
 import { 
   registerAttendance, 
   getDailyAttendance, 
   searchStudents,
-  getSectionStudents
+  getSectionStudents,
+  officiateAttendance
 } from '@/infrastructure/attendance/attendance.repository'
 import JustificationModal from '@/presentation/components/admin/JustificationModal'
 import { Button } from '@/presentation/components/ui/Button'
+import { Toast, ToastType } from '@/presentation/components/ui/Toast'
 
 export default function RegistroAsistenciaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params)
   const [method, setMethod] = useState<'qr' | 'manual' | 'lista'>('qr')
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [isSearching, setIsSearching] = useState(false)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [allStudents, setAllStudents] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [isOfficial, setIsOfficial] = useState(false)
+  const [isOfficiating, setIsOfficiating] = useState(false)
   
+  // Toast state
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null)
+
   // Modal state
   const [justifyingAttendance, setJustifyingAttendance] = useState<any | null>(null)
 
@@ -48,31 +59,50 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   }, [sectionId])
 
   useEffect(() => {
-    if (method === 'qr') {
-      startScanner()
+    if (method === 'qr' && !isOfficial && !isLoading) {
+      // Un pequeño retraso para asegurar que el DOM se ha actualizado
+      const timer = setTimeout(() => {
+        startScanner()
+      }, 100)
+      return () => {
+        clearTimeout(timer)
+        stopScanner()
+      }
     } else {
       stopScanner()
     }
-    return () => stopScanner()
-  }, [method])
+  }, [method, isOfficial, isLoading])
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ message, type })
+  }
 
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const [attendanceData, studentsData] = await Promise.all([
-        getDailyAttendance(sectionId),
-        getSectionStudents(sectionId)
-      ])
-      setAttendanceList(attendanceData)
-      setAllStudents(studentsData)
+      const attendanceRes = await getDailyAttendance(sectionId)
+      const studentsData = await getSectionStudents(sectionId)
+      
+      setAttendanceList(attendanceRes.asistencias || [])
+      setIsOfficial(!!attendanceRes.is_official)
+      setAllStudents(studentsData || [])
+      
+      // Si ya es oficial, forzar modo lista
+      if (attendanceRes.is_official) {
+          setMethod('lista')
+      }
     } catch (error: any) {
       console.error(error)
+      showToast('Error al sincronizar con el servidor', 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   const startScanner = () => {
+    const readerElement = document.getElementById("reader")
+    if (!readerElement) return
+
     if (!scannerRef.current) {
       const scanner = new Html5QrcodeScanner(
         "reader",
@@ -96,17 +126,17 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   }
 
   const onScanSuccess = async (decodedText: string) => {
-    if (isRegistering) return
+    if (isRegistering || isOfficial) return
     setIsRegistering(true)
     try {
       const res = await registerAttendance({
         codigo_sistema: decodedText,
         metodo_registro: 'codigo'
       })
-      alert(`Asistencia registrada: ${res.attendance.estudiante.nombre_completo} (${res.attendance.estado})`)
+      showToast(`Asistencia registrada: ${res.attendance.estudiante.nombre_completo}`, 'success')
       fetchData()
     } catch (error: any) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setIsRegistering(false)
     }
@@ -115,25 +145,57 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   const onScanFailure = (error: any) => {}
 
   const handleManualRegister = async (studentId: string, estado: 'presente' | 'tardanza' | 'falta' = 'presente') => {
+    if (isRegistering) return
+    
+    // Validaciones locales según reglas de oficialización
+    if (isOfficial) {
+        const record = attendanceList.find(a => a.estudiante_id === studentId)
+        if (estado === 'presente') {
+            showToast('No puedes marcar como Presente después de confirmar.', 'warning')
+            return
+        }
+        if (record?.estado === 'presente') {
+            showToast('Este registro de Presente ya es oficial y no se puede cambiar.', 'error')
+            return
+        }
+    }
+
     setIsRegistering(true)
     try {
-      const res = await registerAttendance({
+      await registerAttendance({
         estudiante_id: studentId,
         metodo_registro: 'manual',
         estado: estado
       })
-      alert(`Asistencia registrada como ${estado}`)
-      fetchData()
+      showToast(`Estado actualizado: ${estado.toUpperCase()}`, 'success')
+      await fetchData() // Esperar a que los datos se actualicen
     } catch (error: any) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setIsRegistering(false)
     }
   }
 
+  const handleOfficiate = async () => {
+      if (!confirm('¿CONFIRMAR ASISTENCIAS?\n\n- Se enviará "FALTA" a quienes no tengan registro.\n- Los "PRESENTES" no podrán modificarse más.\n- Solo podrás cambiar entre TARDANZA y FALTA.')) {
+          return
+      }
+
+      setIsOfficiating(true)
+      try {
+          await officiateAttendance(sectionId)
+          showToast('Asistencia confirmada oficialmente', 'success')
+          await fetchData()
+      } catch (error: any) {
+          showToast(error.message, 'error')
+      } finally {
+          setIsOfficiating(false)
+      }
+  }
+
   const getStudentStatus = (studentId: string) => {
     const record = attendanceList.find(a => a.estudiante_id === studentId)
-    if (!record) return { label: 'Falta', color: 'text-red-500 bg-red-50', icon: <X size={14} />, record: null }
+    if (!record) return { label: 'Sin Registro', color: 'text-gray-400 bg-gray-50', icon: <Clock size={14} />, record: null }
     
     if (record.estado === 'presente') 
         return { label: 'Presente', color: 'text-green-600 bg-green-50', icon: <Check size={14} />, record }
@@ -145,39 +207,70 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Control de Asistencia</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-             <Clock size={16} className="text-blue-500" />
-             <span>Rango Presente: 07:40 - 08:10</span>
-          </div>
+        <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-2xl ${isOfficial ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                {isOfficial ? <Lock size={24} /> : <Unlock size={24} />}
+            </div>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    Control de Asistencia 
+                    {isOfficial && <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-md uppercase tracking-tighter shadow-sm">OFICIAL</span>}
+                </h1>
+                <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 font-medium">
+                    <div className="flex items-center gap-1">
+                        <Clock size={14} className="text-blue-500" />
+                        <span>Presente: 10:18 - 10:25</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Calendar size={14} className="text-gray-400" />
+                        <span>{new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
-          <button 
-            onClick={() => setMethod('qr')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-bold ${method === 'qr' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <QrCode size={18} />
-            <span>Escáner QR</span>
-          </button>
-          <button 
-            onClick={() => setMethod('lista')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-bold ${method === 'lista' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <History size={18} />
-            <span>Lista de Alumnos</span>
-          </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={fetchData} 
+                className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                title="Sincronizar"
+            >
+                <RefreshCcw size={20} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+            <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
+                <button 
+                    disabled={isOfficial}
+                    onClick={() => setMethod('qr')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-bold ${method === 'qr' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 disabled:opacity-50'}`}
+                >
+                    <QrCode size={18} />
+                    <span>Escáner</span>
+                </button>
+                <button 
+                    onClick={() => setMethod('lista')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-bold ${method === 'lista' || isOfficial ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <History size={18} />
+                    <span>Lista</span>
+                </button>
+            </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Registration Area */}
         <div className="lg:col-span-2 space-y-6">
-          {method === 'qr' ? (
+          {isLoading ? (
+             <div className="bg-white p-20 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-4">
+                <Loader2 className="animate-spin text-blue-600" size={40} />
+                <p className="font-bold text-gray-400">Actualizando lista de alumnos...</p>
+             </div>
+          ) : (method === 'qr' && !isOfficial) ? (
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center min-h-[450px]">
                 <div className="w-full max-w-sm overflow-hidden rounded-3xl border-8 border-blue-50 bg-gray-50 shadow-inner">
                     <div id="reader" className="w-full"></div>
@@ -189,13 +282,13 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                     {isRegistering && (
                     <div className="p-6 flex items-center justify-center gap-3 text-blue-600 font-bold">
                         <Loader2 className="animate-spin" size={20} />
-                        <span>Validando código...</span>
+                        <span>Validando...</span>
                     </div>
                     )}
                 </div>
             </div>
           ) : (
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="p-6 border-b flex items-center justify-between gap-4">
                     <h2 className="font-bold text-gray-800">Alumnos de la Sección</h2>
                     <div className="relative w-full max-w-xs">
@@ -221,15 +314,21 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                         <tbody className="divide-y divide-gray-50">
                             {allStudents.filter(s => s.nombre_completo.toLowerCase().includes(searchQuery.toLowerCase())).map((student) => {
                                 const status = getStudentStatus(student.id)
+                                const isPresent = status.record?.estado === 'presente'
+                                const isBlocked = isOfficial && isPresent
+
                                 return (
-                                    <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={student.id} className={`transition-colors ${isBlocked ? 'bg-gray-50/50' : 'hover:bg-gray-50'}`}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isPresent ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
                                                     {student.nombre_completo.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-gray-800">{student.nombre_completo}</p>
+                                                    <p className={`font-bold ${isBlocked ? 'text-gray-400' : 'text-gray-800'}`}>
+                                                        {student.nombre_completo}
+                                                        {isBlocked && <Lock size={12} className="inline ml-2 text-amber-500" />}
+                                                    </p>
                                                     <p className="text-[10px] text-gray-400">{student.codigo_sistema}</p>
                                                 </div>
                                             </div>
@@ -244,10 +343,11 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                                             <div className="flex justify-end gap-1">
                                                 <Button 
                                                     size="sm" 
-                                                    variant={status.record?.estado === 'presente' ? 'primary' : 'tertiary'}
+                                                    variant={isPresent ? 'primary' : 'tertiary'}
                                                     onClick={() => handleManualRegister(student.id, 'presente')}
+                                                    disabled={isOfficial || isRegistering}
                                                     title="Presente"
-                                                    className="w-8 h-8 p-0"
+                                                    className={`w-8 h-8 p-0 ${isOfficial && !isPresent ? 'opacity-30' : ''}`}
                                                 >
                                                     P
                                                 </Button>
@@ -255,17 +355,19 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                                                     size="sm" 
                                                     variant={status.record?.estado === 'tardanza' ? 'secondary' : 'tertiary'}
                                                     onClick={() => handleManualRegister(student.id, 'tardanza')}
+                                                    disabled={isBlocked || isRegistering}
                                                     title="Tardanza"
-                                                    className="w-8 h-8 p-0"
+                                                    className={`w-8 h-8 p-0 ${isBlocked ? 'opacity-30' : ''}`}
                                                 >
                                                     T
                                                 </Button>
                                                 <Button 
                                                     size="sm" 
-                                                    variant={(!status.record || status.record?.estado === 'falta') ? 'danger' : 'tertiary'}
+                                                    variant={(status.record?.estado === 'falta') ? 'danger' : 'tertiary'}
                                                     onClick={() => handleManualRegister(student.id, 'falta')}
+                                                    disabled={isBlocked || isRegistering}
                                                     title="Falta"
-                                                    className={`w-8 h-8 p-0 ${(!status.record || status.record?.estado === 'falta') ? 'bg-red-600 text-white hover:bg-red-700' : ''}`}
+                                                    className={`w-8 h-8 p-0 ${status.record?.estado === 'falta' ? 'bg-red-600 text-white hover:bg-red-700' : ''} ${isBlocked ? 'opacity-30' : ''}`}
                                                 >
                                                     F
                                                 </Button>
@@ -303,19 +405,51 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
                 <div className="space-y-4">
                     <StatRow label="Presentes" value={attendanceList.filter(a => a.estado === 'presente').length} color="green" />
                     <StatRow label="Tardanzas" value={attendanceList.filter(a => a.estado === 'tardanza').length} color="amber" />
-                    <StatRow label="Faltas" value={allStudents.length - attendanceList.length} color="red" />
+                    <StatRow label="Faltas" value={attendanceList.filter(a => a.estado === 'falta').length} color="red" />
                     <div className="pt-4 mt-4 border-t flex justify-between items-center font-bold text-gray-800">
-                        <span>Total Alumnos</span>
-                        <span>{allStudents.length}</span>
+                        <span>Alumnos Registrados</span>
+                        <span>{attendanceList.length} / {allStudents.length}</span>
                     </div>
                 </div>
+
+                {!isOfficial ? (
+                    <div className="mt-6 space-y-3">
+                        <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3">
+                            <Info size={16} className="text-blue-600 mt-0.5" />
+                            <p className="text-[10px] text-blue-700 font-medium">
+                                El registro está en modo BORRADOR. Puedes editar cualquier estado libremente hasta que confirmes.
+                            </p>
+                        </div>
+                        <Button 
+                            onClick={handleOfficiate}
+                            isLoading={isOfficiating}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                        >
+                            <ShieldCheck size={20} />
+                            Confirmar Asistencias
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="mt-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3">
+                        <Lock size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-amber-700 leading-relaxed font-bold uppercase tracking-tight">
+                            Asistencia Confirmada
+                        </p>
+                    </div>
+                )}
             </div>
 
-            <div className="bg-blue-600 p-6 rounded-3xl text-white shadow-lg shadow-blue-100">
-                <h3 className="font-bold mb-2">Ayuda Rápida</h3>
-                <p className="text-blue-100 text-xs leading-relaxed">
-                    Usa el escáner para agilizar el ingreso. Las tardanzas después de las 08:10 se marcan automáticamente.
-                </p>
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+                <div className="relative z-10">
+                    <h3 className="font-bold mb-2 flex items-center gap-2">
+                        <AlertTriangle size={18} />
+                        Ayuda Rápida
+                    </h3>
+                    <p className="text-blue-100 text-xs leading-relaxed font-medium">
+                        Confirmar la asistencia es obligatorio para procesar justificaciones y alertas mensuales.
+                    </p>
+                </div>
+                <ShieldCheck className="absolute -bottom-4 -right-4 text-white/10" size={100} />
             </div>
         </div>
       </div>
@@ -342,8 +476,8 @@ function StatRow({ label, value, color }: { label: string, value: number, color:
     }
     return (
         <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">{label}</span>
-            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${colors[color]}`}>{value}</span>
+            <span className="text-sm text-gray-500 font-medium">{label}</span>
+            <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${colors[color]}`}>{value}</span>
         </div>
     )
 }

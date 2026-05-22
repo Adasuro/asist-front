@@ -11,7 +11,11 @@ export async function registerAttendance(data: {
 }
 
 export async function getDailyAttendance(sectionId: string) {
-  return HttpClient.get<any[]>(`/attendance/section/${sectionId}/daily`)
+  return HttpClient.get<{ asistencias: any[], is_official: boolean }>(`/attendance/section/${sectionId}/daily`)
+}
+
+export async function officiateAttendance(sectionId: string) {
+  return HttpClient.post<any>(`/attendance/section/${sectionId}/officiate`)
 }
 
 export async function getSectionStudents(sectionId: string) {
@@ -32,4 +36,8 @@ export async function justifyAttendance(data: {
   documento_url?: string
 }) {
   return HttpClient.post<any>('/justifications', data)
+}
+
+export async function getJustifications() {
+  return HttpClient.get<any[]>('/justifications')
 }
