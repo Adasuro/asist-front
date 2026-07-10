@@ -19,6 +19,7 @@ import {
   Calendar,
   Clock
 } from 'lucide-react'
+import DashboardStats from '@/presentation/components/dashboard/DashboardStats'
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
   const { profile } = user
   const isSuper = profile.rol === 'superusuario'
   
-  // Cargar estadísticas reales
+  // Cargar estadísticas simples de alertas (opcional si aún se requiere, pero lo manejamos en DashboardStats)
   const counts = await (async () => {
     try {
       const cookieStore = await cookies()
@@ -41,27 +42,32 @@ export default async function DashboardPage() {
       })
       return await response.json()
     } catch (e) {
-      return { estudiantes: 0, secciones: 0, alertas: 0 }
+      return { alertas: 0 }
     }
   })()
 
-  const misSecciones = !isSuper ? await getAssignedSections(user.id) : []
+  // Secciones: Si es superusuario trae todas, si es auxiliar trae las suyas
+  const secciones = await getAssignedSections(user.id) || [];
+  const misSecciones = !isSuper ? secciones : [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800">Panel de Control</h1>
-        <p className="text-gray-500">Bienvenido de nuevo, {profile.nombre_completo}</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Panel de Control</h1>
+          <p className="text-gray-500">Bienvenido de nuevo, {profile.nombre_completo}</p>
+        </div>
+        {counts?.alertas > 0 && (
+           <div className="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-yellow-200 shadow-sm">
+             <AlertTriangle size={18} />
+             Hay {counts.alertas} alerta(s) sin resolver
+           </div>
+        )}
       </div>
 
-      {/* Grid de Accesos Rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <QuickStat title={isSuper ? "Total Estudiantes" : "Mis Alumnos"} value={counts?.estudiantes || 0} icon={<Users size={24} />} color="blue" />
-        <QuickStat title={isSuper ? "Secciones Activas" : "Mis Secciones"} value={counts?.secciones || 0} icon={<School size={24} />} color="green" />
-        <QuickStat title="Alertas Hoy" value={counts?.alertas || 0} icon={<AlertTriangle size={24} />} color="yellow" />
-        <QuickStat title="Asistencia Global" value="0%" icon={<BarChart3 size={24} />} color="purple" />
-      </div>
+      {/* KPI Stats & Charts Component */}
+      <DashboardStats isSuper={isSuper} sections={secciones} />
 
       {/* Main Content Areas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -172,7 +178,7 @@ export default async function DashboardPage() {
           <section className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-2xl shadow-lg text-white">
             <h3 className="font-bold text-lg mb-2">Consejo del día</h3>
             <p className="text-blue-100 text-sm leading-relaxed">
-              Recuerda registrar la asistencia durante los primeros 15 minutos de cada sesión para mantener las alertas al día.
+              Recuerda registrar la asistencia durante los primeros 15 minutos de cada sesión para mantener las estadísticas al día y evitar notificaciones tardías a los padres.
             </p>
           </section>
         </div>
@@ -181,23 +187,3 @@ export default async function DashboardPage() {
   )
 }
 
-function QuickStat({ title, value, icon, color }: { title: string, value: any, icon: React.ReactNode, color: string }) {
-  const colors: any = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
-    purple: 'bg-purple-50 text-purple-600',
-    red: 'bg-red-50 text-red-600',
-  }
-  return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-      <div className={`p-3 rounded-lg ${colors[color] || 'bg-gray-50'}`}>
-        {icon}
-      </div>
-      <div>
-        <div className="text-sm text-gray-500 font-medium">{title}</div>
-        <div className="text-xl font-bold text-gray-800">{value}</div>
-      </div>
-    </div>
-  )
-}
