@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Loader2, FileText, Check } from 'lucide-react'
+import { X, Loader2, FileText, Check, Upload } from 'lucide-react'
 import { Button } from '@/presentation/components/ui/Button'
 import { justifyAttendance } from '@/infrastructure/attendance/attendance.repository'
 
@@ -14,6 +14,7 @@ interface JustificationModalProps {
 
 export default function JustificationModal({ asistenciaId, studentName, onClose, onSuccess }: JustificationModalProps) {
   const [motivo, setMotivo] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,10 +26,14 @@ export default function JustificationModal({ asistenciaId, studentName, onClose,
     setError(null)
 
     try {
-      await justifyAttendance({
-        asistencia_id: asistenciaId,
-        motivo: motivo
-      })
+      const formData = new FormData()
+      formData.append('asistencia_id', asistenciaId)
+      formData.append('motivo', motivo)
+      if (file) {
+        formData.append('documento', file)
+      }
+
+      await justifyAttendance(formData)
       onSuccess()
       onClose()
     } catch (err: any) {
@@ -66,6 +71,24 @@ export default function JustificationModal({ asistenciaId, studentName, onClose,
               onChange={(e) => setMotivo(e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+              <Upload size={16} className="text-gray-400" />
+              Documento de sustento (opcional)
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg"
+              className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setFile(e.target.files[0])
+                }
+              }}
+            />
+            <p className="text-[10px] text-gray-400 ml-1">Formatos admitidos: PDF, PNG, JPG, JPEG. Máximo 2MB.</p>
           </div>
 
           {error && (

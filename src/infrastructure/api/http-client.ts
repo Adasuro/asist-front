@@ -32,6 +32,7 @@ export class HttpClient {
     
     return {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     }
   }

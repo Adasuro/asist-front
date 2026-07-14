@@ -7,12 +7,14 @@ import { getJustifications } from '@/infrastructure/attendance/attendance.reposi
 import { Badge } from '@/presentation/components/ui/Badge'
 import { Loader2 } from 'lucide-react'
 import JustificationDetailModal from '@/presentation/components/admin/JustificationDetailModal'
+import CreateJustificationModal from '@/presentation/components/admin/CreateJustificationModal'
 
 export default function JustificacionesPage() {
   const { data: justificationsData, isLoading, mutate: fetchData } = useSWR('/justifications', getJustifications)
   const justifications = justificationsData || []
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedJustification, setSelectedJustification] = useState<any | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
 
   const filteredJustifications = justifications.filter(j => 
     j.asistencia.estudiante.nombre_completo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -29,7 +31,10 @@ export default function JustificacionesPage() {
           </h1>
           <p className="text-gray-500 font-medium mt-1">Gestión de inasistencias y permisos médicos</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95">
+        <button 
+          onClick={() => setIsCreating(true)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
+        >
           <Plus size={20} />
           Nueva Justificación
         </button>
@@ -148,6 +153,17 @@ export default function JustificacionesPage() {
             justification={selectedJustification}
             onClose={() => setSelectedJustification(null)}
           />
+      )}
+
+      {/* Modal de Creación */}
+      {isCreating && (
+        <CreateJustificationModal
+          onClose={() => setIsCreating(false)}
+          onSuccess={() => {
+            setIsCreating(false)
+            fetchData()
+          }}
+        />
       )}
     </div>
   )

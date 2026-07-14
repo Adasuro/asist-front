@@ -30,7 +30,7 @@ export async function searchStudents(query: string, sectionId: string) {
   })
 }
 
-export async function justifyAttendance(data: {
+export async function justifyAttendance(data: FormData | {
   asistencia_id: string
   motivo: string
   documento_url?: string
@@ -40,4 +40,8 @@ export async function justifyAttendance(data: {
 
 export async function getJustifications() {
   return HttpClient.get<any[]>('/justifications')
+}
+
+export async function registerBulkAttendance(seccionId: string, students: { estudiante_id: string, estado: 'presente' | 'falta' }[]) {
+  return HttpClient.post<any>('/attendance/bulk', { seccion_id: seccionId, students })
 }
