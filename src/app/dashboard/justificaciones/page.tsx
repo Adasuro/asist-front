@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { FileText, Plus, Search, Filter, Calendar, User, School, Clock, Download, Eye } from 'lucide-react'
 import { getJustifications } from '@/infrastructure/attendance/attendance.repository'
 import { Badge } from '@/presentation/components/ui/Badge'
@@ -8,28 +9,10 @@ import { Loader2 } from 'lucide-react'
 import JustificationDetailModal from '@/presentation/components/admin/JustificationDetailModal'
 
 export default function JustificacionesPage() {
-  const [justifications, setJustifications] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: justificationsData, isLoading, mutate: fetchData } = useSWR('/justifications', getJustifications)
+  const justifications = justificationsData || []
   const [searchQuery, setSearchQuery] = useState('')
-  
-  // Modal state
   const [selectedJustification, setSelectedJustification] = useState<any | null>(null)
-
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
-    setIsLoading(true)
-    try {
-      const data = await getJustifications()
-      setJustifications(data)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const filteredJustifications = justifications.filter(j => 
     j.asistencia.estudiante.nombre_completo.toLowerCase().includes(searchQuery.toLowerCase()) ||

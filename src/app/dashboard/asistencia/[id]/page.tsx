@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, use } from 'react'
+import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
@@ -41,7 +42,6 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   const [searchQuery, setSearchQuery] = useState('')
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [allStudents, setAllStudents] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isRegistering, setIsRegistering] = useState(false)
   const [isOfficial, setIsOfficial] = useState(false)
   const [isOfficiating, setIsOfficiating] = useState(false)
@@ -54,9 +54,31 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
 
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
 
+  const { data: attendanceRes, mutate: revalidateAttendance, error: attendanceError, isLoading: loadingAttendance } = useSWR(
+    sectionId ? `/attendance/section/${sectionId}/daily` : null,
+    () => getDailyAttendance(sectionId)
+  )
+
+  const { data: studentsData, mutate: revalidateStudents, error: studentsError, isLoading: loadingStudents } = useSWR(
+    sectionId ? `/students/section/${sectionId}` : null,
+    () => getSectionStudents(sectionId)
+  )
+
+  const isLoading = (loadingAttendance || loadingStudents) && (!attendanceRes || !studentsData)
+  const hasError = (attendanceError || studentsError) && (!attendanceRes || !studentsData)
+
   useEffect(() => {
-    fetchData()
-  }, [sectionId])
+    if (attendanceRes) {
+      setAttendanceList(attendanceRes.asistencias || [])
+      setIsOfficial(!!attendanceRes.is_official)
+      if (attendanceRes.is_official) {
+        setMethod('lista')
+      }
+    }
+    if (studentsData) {
+      setAllStudents(studentsData || [])
+    }
+  }, [attendanceRes, studentsData])
 
   useEffect(() => {
     if (method === 'qr' && !isOfficial && !isLoading) {
@@ -78,24 +100,25 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
   }
 
   const fetchData = async () => {
-    setIsLoading(true)
     try {
-      const attendanceRes = await getDailyAttendance(sectionId)
-      const studentsData = await getSectionStudents(sectionId)
+      const [att, std] = await Promise.all([
+        revalidateAttendance(),
+        revalidateStudents()
+      ])
       
-      setAttendanceList(attendanceRes.asistencias || [])
-      setIsOfficial(!!attendanceRes.is_official)
-      setAllStudents(studentsData || [])
-      
-      // Si ya es oficial, forzar modo lista
-      if (attendanceRes.is_official) {
+      if (att) {
+        setAttendanceList(att.asistencias || [])
+        setIsOfficial(!!att.is_official)
+        if (att.is_official) {
           setMethod('lista')
+        }
+      }
+      if (std) {
+        setAllStudents(std || [])
       }
     } catch (error: any) {
       console.error(error)
       showToast('Error al sincronizar con el servidor', 'error')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -265,7 +288,14 @@ export default function RegistroAsistenciaPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Registration Area */}
         <div className="lg:col-span-2 space-y-6">
-          {isLoading ? (
+          {hasError ? (
+             <div className="bg-white p-20 rounded-3xl border border-red-100 shadow-sm flex flex-col items-center justify-center gap-4 text-center">
+                <AlertTriangle className="text-red-500 animate-bounce" size={40} />
+                <p className="font-bold text-gray-700">Error al cargar la información del servidor</p>
+                <p className="text-xs text-gray-400">Por favor, verifica tu conexión o reintenta.</p>
+                <Button variant="secondary" onClick={fetchData} leftIcon={<RefreshCcw size={16} />}>Reintentar</Button>
+             </div>
+          ) : isLoading ? (
              <div className="bg-white p-20 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-4">
                 <Loader2 className="animate-spin text-blue-600" size={40} />
                 <p className="font-bold text-gray-400">Actualizando lista de alumnos...</p>

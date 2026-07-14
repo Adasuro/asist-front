@@ -5,6 +5,7 @@ import { User, Lock, Eye, EyeOff, CheckCircle, Circle, AlertCircle } from 'lucid
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { loginAction } from '@/application/auth/login.action';
+import { loginSchema } from '@/domain/validation/login.schema';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,7 +14,7 @@ const LoginForm: React.FC = () => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Password Validations
+  // Password feedback visual checks
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -25,7 +26,12 @@ const LoginForm: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    if (!isValid) return;
+    // Zod schema strict validation
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      setError(validation.error.issues[0].message);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('email', email);
@@ -101,7 +107,7 @@ const LoginForm: React.FC = () => {
 
       <Button 
         type="submit" 
-        disabled={!isValid} 
+        disabled={!isValid || isPending} 
         isLoading={isPending}
         className="w-full h-12 text-sm"
       >

@@ -7,6 +7,7 @@ import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { updateStudentAction } from '@/application/students/student.actions'
 import { HttpClient } from '@/infrastructure/api/http-client'
+import { studentSchema } from '@/domain/validation/student.schema'
 
 interface Grado {
   id: string
@@ -58,6 +59,14 @@ export default function EditStudentModal({
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+
+    // Zod validation on submit
+    const validation = studentSchema.safeParse(formData)
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setSubmitting(false)
+      return
+    }
 
     try {
       const result = await updateStudentAction(student.id, formData)

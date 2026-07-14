@@ -14,6 +14,7 @@ interface Grado {
 
 import { createStudentAction } from '@/application/students/student.actions'
 import { HttpClient } from '@/infrastructure/api/http-client'
+import { studentSchema } from '@/domain/validation/student.schema'
 
 export default function CreateStudentModal({ 
   onClose, 
@@ -59,6 +60,14 @@ export default function CreateStudentModal({
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+
+    // Zod validation on submit
+    const validation = studentSchema.safeParse(formData)
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setSubmitting(false)
+      return
+    }
 
     try {
       const result = await createStudentAction(formData)

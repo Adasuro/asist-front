@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { getAdvancedStats, AdvancedStats } from '@/infrastructure/dashboard/dashboard.repository';
 import KpiCards from './KpiCards';
 import TrendChart from './TrendChart';
@@ -19,18 +20,11 @@ interface DashboardStatsProps {
 
 export default function DashboardStats({ isSuper, sections }: DashboardStatsProps) {
   const [selectedSection, setSelectedSection] = useState<string>('');
-  const [stats, setStats] = useState<AdvancedStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadStats() {
-      setLoading(true);
-      const data = await getAdvancedStats(selectedSection || undefined);
-      setStats(data);
-      setLoading(false);
-    }
-    loadStats();
-  }, [selectedSection]);
+  
+  const { data: stats, isLoading: loading } = useSWR<AdvancedStats | null>(
+    selectedSection ? `/stats/advanced?seccion_id=${selectedSection}` : '/stats/advanced',
+    () => getAdvancedStats(selectedSection || undefined)
+  );
 
   return (
     <div className="space-y-8">

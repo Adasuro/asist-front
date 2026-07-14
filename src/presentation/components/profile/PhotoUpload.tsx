@@ -3,15 +3,13 @@
 import { useState, useRef } from 'react'
 import { Camera, Loader2, User } from 'lucide-react'
 import { updateProfilePhotoAction } from '@/application/auth/profile.actions'
-import Image from 'next/image'
+import { SafeImage } from '../ui/SafeImage'
 
 export function PhotoUpload({ user }: { user: any }) {
   const [isPending, setIsPending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const photoUrl = user.foto_perfil 
-    ? `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/storage/${user.foto_perfil}`
-    : null
+  const photoUrl = user.foto_url || null
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -34,7 +32,7 @@ export function PhotoUpload({ user }: { user: any }) {
       <div className="relative group">
         <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md relative">
           {photoUrl ? (
-            <Image 
+            <SafeImage 
               src={photoUrl} 
               alt={user.nombre_completo} 
               fill 

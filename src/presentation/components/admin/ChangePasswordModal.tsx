@@ -8,6 +8,7 @@ import {
   Key
 } from 'lucide-react'
 import { updateAuxiliarPasswordAction } from '@/application/admin/admin.actions'
+import { changeAuxiliarPasswordSchema } from '@/domain/validation/auxiliar.schema'
 
 export function ChangePasswordModal({ auxiliaryId, name }: { auxiliaryId: string, name: string }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -22,6 +23,16 @@ export function ChangePasswordModal({ auxiliaryId, name }: { auxiliaryId: string
     setSuccess(false)
     
     const formData = new FormData(e.currentTarget)
+    const password = formData.get('password') as string
+
+    // Validate using Zod
+    const validation = changeAuxiliarPasswordSchema.safeParse({ password })
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setIsPending(false)
+      return
+    }
+    
     const result = await updateAuxiliarPasswordAction(auxiliaryId, formData)
     
     setIsPending(false)

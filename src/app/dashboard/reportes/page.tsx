@@ -1,55 +1,34 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import useSWR from 'swr'
 import { TrendingUp, Download, BarChart2, PieChart, Calendar as CalendarIcon, Filter, CheckCircle2, Clock, AlertCircle, FileText, Search, User, FileSpreadsheet } from 'lucide-react'
 import { HttpClient } from '@/infrastructure/api/http-client'
 import { Button } from '@/presentation/components/ui/Button'
 import { Select } from '@/presentation/components/ui/Select'
 
 export default function ReportesPage() {
-  const [stats, setStats] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState<string | null>(null)
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
   const [fechaFin, setFechaFin] = useState(new Date().toISOString().split('T')[0])
   const [estudianteNombre, setEstudianteNombre] = useState('')
   const [seccionId, setSeccionId] = useState('')
-  const [secciones, setSecciones] = useState<any[]>([])
 
-  useEffect(() => {
-    fetchSecciones()
-  }, [])
+  const { data: seccionesData } = useSWR('/sections/assigned', () => HttpClient.get<any[]>('/sections/assigned'))
+  const secciones = seccionesData || []
 
-  useEffect(() => {
-    fetchStats()
-  }, [fechaInicio, fechaFin, seccionId])
-
-  const fetchSecciones = async () => {
-    try {
-      const data = await HttpClient.get<any[]>('/sections/assigned')
-      setSecciones(data)
-    } catch (error) {
-      console.error(error)
-    }
-  }
-
-  const fetchStats = async () => {
-    setLoading(true)
-    try {
+  const { data: stats, isLoading: loading, mutate: fetchStats } = useSWR(
+    ['/reports/attendance-stats', fechaInicio, fechaFin, seccionId, estudianteNombre],
+    ([, fIni, fFin, sId, name]) => {
       const params: any = { 
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-        estudiante_nombre: estudianteNombre
+        fecha_inicio: fIni,
+        fecha_fin: fFin,
+        estudiante_nombre: name
       }
-      if (seccionId) params.seccion_id = seccionId
-      const data = await HttpClient.get<any>('/reports/attendance-stats', params)
-      setStats(data)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading(false)
+      if (sId) params.seccion_id = sId
+      return HttpClient.get<any>('/reports/attendance-stats', params)
     }
-  }
+  )
 
   const handleExport = async (type: 'pdf' | 'excel') => {
     setExporting(type)

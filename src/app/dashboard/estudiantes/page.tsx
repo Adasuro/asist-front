@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { Plus, Search, Users, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import StudentTable from '@/presentation/components/admin/StudentTable'
 import ImportStudentsModal from '@/presentation/components/admin/ImportStudentsModal'
@@ -17,8 +18,6 @@ interface Grado {
 }
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState([])
-  const [loading, setLoading] = useState(true)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   
@@ -27,67 +26,40 @@ export default function StudentsPage() {
   const [gradoId, setGradoId] = useState('')
   const [seccionId, setSeccionId] = useState('')
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalStudents, setTotalStudents] = useState(0)
-  
-  const [grados, setGrados] = useState<Grado[]>([])
-  const [userRole, setUserRole] = useState<string | null>(null)
 
-  const fetchGrados = async () => {
-    try {
-      const data = await HttpClient.get<Grado[]>('/grados')
-      setGrados(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error fetching grades:', error)
-    }
-  }
+  const { data: userData } = useSWR('/user', () => HttpClient.get<any>('/user'))
+  const userRole = userData?.rol || null
 
-  const fetchStudents = async () => {
-    setLoading(true)
-    try {
-      const params = {
-        search: searchTerm,
-        grado_id: gradoId,
-        seccion_id: seccionId,
-        page: page.toString()
-      }
-      
-      const data = await HttpClient.get<any>('/students', params)
-      setStudents(data.data || [])
-      setTotalPages(data.last_page || 1)
-      setTotalStudents(data.total || 0)
-    } catch (error) {
-      console.error('Error fetching students:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: gradosData } = useSWR('/grados', () => HttpClient.get<Grado[]>('/grados'))
+  const grados = Array.isArray(gradosData) ? gradosData : []
 
-  const fetchUserRole = async () => {
-    try {
-      const data = await HttpClient.get<any>('/user')
-      setUserRole(data.rol)
-    } catch (error) {
-      console.error('Error fetching user role:', error)
-    }
-  }
-
+  // Debounced search term for SWR key
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm)
   useEffect(() => {
-    fetchUserRole()
-    fetchGrados()
-  }, [])
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      setPage(1)
-      fetchStudents()
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
     }, 500)
-    return () => clearTimeout(delayDebounceFn)
-  }, [searchTerm, gradoId, seccionId])
+    return () => clearTimeout(handler)
+  }, [searchTerm])
 
+  // When filters change, reset page to 1
   useEffect(() => {
-    fetchStudents()
-  }, [page])
+    setPage(1)
+  }, [debouncedSearch, gradoId, seccionId])
+
+  const { data: studentsData, isLoading: loading, mutate: fetchStudents } = useSWR(
+    ['/students', debouncedSearch, gradoId, seccionId, page],
+    ([, search, gId, sId, p]) => HttpClient.get<any>('/students', {
+      search,
+      grado_id: gId,
+      seccion_id: sId,
+      page: p.toString()
+    })
+  )
+
+  const students = studentsData?.data || []
+  const totalPages = studentsData?.last_page || 1
+  const totalStudents = studentsData?.total || 0
 
   const isSuper = userRole === 'superusuario'
   const selectedGrado = grados.find(g => g.id === gradoId)

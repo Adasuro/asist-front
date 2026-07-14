@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { createAuxiliarAction } from '@/application/admin/admin.actions'
+import { createAuxiliarSchema } from '@/domain/validation/auxiliar.schema'
 
 export function CreateAuxiliarModal({ grados }: { grados: any[] }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -24,6 +25,20 @@ export function CreateAuxiliarModal({ grados }: { grados: any[] }) {
     setError(null)
     
     const formData = new FormData(e.currentTarget)
+    const nombre_completo = formData.get('nombre_completo') as string
+    const email = formData.get('email') as string
+    const dni = formData.get('dni') as string
+    const password = formData.get('password') as string
+    const grado_id = formData.get('grado_id') as string
+
+    // Validate using Zod schema
+    const validation = createAuxiliarSchema.safeParse({ nombre_completo, email, dni, password, grado_id })
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setIsPending(false)
+      return
+    }
+    
     const result = await createAuxiliarAction(formData)
     
     setIsPending(false)
