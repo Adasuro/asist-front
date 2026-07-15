@@ -11,6 +11,7 @@ import {
   UserCog
 } from 'lucide-react'
 import { updateAuxiliarAction } from '@/application/admin/admin.actions'
+import { updateAuxiliarSchema } from '@/domain/validation/auxiliar.schema'
 
 interface EditAuxiliarModalProps {
   auxiliar: any
@@ -31,6 +32,19 @@ export function EditAuxiliarModal({ auxiliar, grados }: EditAuxiliarModalProps) 
     setError(null)
     
     const formData = new FormData(e.currentTarget)
+    const nombre_completo = formData.get('nombre_completo') as string
+    const email = formData.get('email') as string
+    const dni = formData.get('dni') as string
+    const grado_id = formData.get('grado_id') as string
+
+    // Validate using Zod schema
+    const validation = updateAuxiliarSchema.safeParse({ nombre_completo, email, dni, grado_id })
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setIsPending(false)
+      return
+    }
+
     const result = await updateAuxiliarAction(auxiliar.id, formData)
     
     setIsPending(false)

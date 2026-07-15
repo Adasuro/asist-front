@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Phone, MapPin, Calendar, Save, Loader2, CreditCard, Mail } from 'lucide-react'
 import { updateProfileAction } from '@/application/auth/profile.actions'
+import { profileSchema } from '@/domain/validation/profile.schema'
 
 export function ProfileForm({ user }: { user: any }) {
   const [isPending, setIsPending] = useState(false)
@@ -16,6 +17,18 @@ export function ProfileForm({ user }: { user: any }) {
     setSuccess(false)
 
     const formData = new FormData(e.currentTarget)
+    const telefono = formData.get('telefono') as string
+    const direccion = formData.get('direccion') as string
+    const fecha_nacimiento = formData.get('fecha_nacimiento') as string
+
+    // Validate using Zod schema
+    const validation = profileSchema.safeParse({ telefono, direccion, fecha_nacimiento })
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setIsPending(false)
+      return
+    }
+
     const result = await updateProfileAction(formData)
 
     setIsPending(false)

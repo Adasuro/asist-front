@@ -1,55 +1,46 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import useSWR from 'swr'
 import { TrendingUp, Download, BarChart2, PieChart, Calendar as CalendarIcon, Filter, CheckCircle2, Clock, AlertCircle, FileText, Search, User, FileSpreadsheet } from 'lucide-react'
 import { HttpClient } from '@/infrastructure/api/http-client'
 import { Button } from '@/presentation/components/ui/Button'
 import { Select } from '@/presentation/components/ui/Select'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 export default function ReportesPage() {
-  const [stats, setStats] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState<string | null>(null)
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
   const [fechaFin, setFechaFin] = useState(new Date().toISOString().split('T')[0])
   const [estudianteNombre, setEstudianteNombre] = useState('')
   const [seccionId, setSeccionId] = useState('')
-  const [secciones, setSecciones] = useState<any[]>([])
 
-  useEffect(() => {
-    fetchSecciones()
-  }, [])
+  const { data: seccionesData } = useSWR('/sections/assigned', () => HttpClient.get<any[]>('/sections/assigned'))
+  const secciones = seccionesData || []
 
-  useEffect(() => {
-    fetchStats()
-  }, [fechaInicio, fechaFin, seccionId])
-
-  const fetchSecciones = async () => {
-    try {
-      const data = await HttpClient.get<any[]>('/sections/assigned')
-      setSecciones(data)
-    } catch (error) {
-      console.error(error)
-    }
-  }
-
-  const fetchStats = async () => {
-    setLoading(true)
-    try {
+  const { data: stats, isLoading: loading, mutate: fetchStats } = useSWR(
+    ['/reports/attendance-stats', fechaInicio, fechaFin, seccionId, estudianteNombre],
+    ([, fIni, fFin, sId, name]) => {
       const params: any = { 
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-        estudiante_nombre: estudianteNombre
+        fecha_inicio: fIni,
+        fecha_fin: fFin,
+        estudiante_nombre: name
       }
-      if (seccionId) params.seccion_id = seccionId
-      const data = await HttpClient.get<any>('/reports/attendance-stats', params)
-      setStats(data)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading(false)
+      if (sId) params.seccion_id = sId
+      return HttpClient.get<any>('/reports/attendance-stats', params)
     }
-  }
+  )
+
+  const { data: rankingsData, isLoading: loadingRankings, mutate: fetchRankings } = useSWR(
+    ['/reports/rankings', fechaInicio, fechaFin],
+    ([, fIni, fFin]) => {
+      const params: any = { 
+        fecha_inicio: fIni,
+        fecha_fin: fFin
+      }
+      return HttpClient.get<any>('/reports/rankings', params)
+    }
+  )
 
   const handleExport = async (type: 'pdf' | 'excel') => {
     setExporting(type)
@@ -160,7 +151,7 @@ export default function ReportesPage() {
           />
         </div>
         <div className="flex items-end">
-            <Button variant="secondary" className="w-full" onClick={fetchStats} loading={loading}>
+            <Button variant="secondary" className="w-full" onClick={() => { fetchStats(); fetchRankings(); }} loading={loading || loadingRankings}>
                 Actualizar
             </Button>
         </div>
@@ -247,6 +238,93 @@ export default function ReportesPage() {
                             color="bg-red-500"
                         />
                     </div>
+                </div>
+            </div>
+
+            {/* Rankings Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-white p-8 rounded-3xl border shadow-sm hover:shadow-md transition-all duration-300">
+                    <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                        <BarChart2 size={24} className="text-blue-500" />
+                        Ranking de Tardanzas y Faltas por Aula
+                    </h2>
+                    <p className="text-xs text-gray-400 mb-6">Comparativa de ausentismo y tardanzas entre las secciones asignadas.</p>
+                    
+                    {loadingRankings ? (
+                        <div className="h-80 flex items-center justify-center">
+                            <Loader2 className="animate-spin text-blue-500 animate-bounce" size={32} />
+                        </div>
+                    ) : rankingsData?.secciones?.length > 0 ? (
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={rankingsData.secciones.map((sec: any) => ({
+                                        name: `${sec.grado_nombre} - ${sec.seccion_nombre}`,
+                                        Faltas: Number(sec.faltas),
+                                        Tardanzas: Number(sec.tardanzas)
+                                    }))}
+                                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        labelStyle={{ fontWeight: 'bold', color: '#1f2937' }}
+                                    />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                                    <Bar dataKey="Faltas" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
+                                    <Bar dataKey="Tardanzas" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-80 flex items-center justify-center text-gray-400">
+                            No hay suficientes datos para generar el ranking por aula
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-white p-8 rounded-3xl border shadow-sm hover:shadow-md transition-all duration-300">
+                    <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                        <BarChart2 size={24} className="text-purple-500" />
+                        Ranking de Tardanzas y Faltas por Grado
+                    </h2>
+                    <p className="text-xs text-gray-400 mb-6">Comparativa de ausentismo y tardanzas acumulados por cada grado.</p>
+                    
+                    {loadingRankings ? (
+                        <div className="h-80 flex items-center justify-center">
+                            <Loader2 className="animate-spin text-blue-500 animate-bounce" size={32} />
+                        </div>
+                    ) : rankingsData?.grados?.length > 0 ? (
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={rankingsData.grados.map((gra: any) => ({
+                                        name: gra.grado_nombre,
+                                        Faltas: Number(gra.faltas),
+                                        Tardanzas: Number(gra.tardanzas)
+                                    }))}
+                                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        labelStyle={{ fontWeight: 'bold', color: '#1f2937' }}
+                                    />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                                    <Bar dataKey="Faltas" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
+                                    <Bar dataKey="Tardanzas" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-80 flex items-center justify-center text-gray-400">
+                            No hay suficientes datos para generar el ranking por grado
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

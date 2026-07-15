@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Lock, ShieldAlert, Key, Loader2, CheckCircle2 } from 'lucide-react'
 import { updateMyPasswordAction } from '@/application/auth/profile.actions'
+import { profilePasswordSchema } from '@/domain/validation/profile.schema'
 
 export function PasswordChange({ user }: { user: any }) {
   const isSuperUser = user.rol === 'superusuario'
@@ -17,6 +18,18 @@ export function PasswordChange({ user }: { user: any }) {
     setSuccess(false)
 
     const formData = new FormData(e.currentTarget)
+    const current_password = formData.get('current_password') as string
+    const password = formData.get('password') as string
+    const password_confirmation = formData.get('password_confirmation') as string
+
+    // Validate using Zod schema
+    const validation = profilePasswordSchema.safeParse({ current_password, password, password_confirmation })
+    if (!validation.success) {
+      setError(validation.error.issues[0].message)
+      setIsPending(false)
+      return
+    }
+
     const result = await updateMyPasswordAction(formData)
 
     setIsPending(false)
