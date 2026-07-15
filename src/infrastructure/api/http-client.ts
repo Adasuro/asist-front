@@ -49,7 +49,12 @@ export class HttpClient {
 
     // Si el body es FormData, el navegador debe establecer el Content-Type con el boundary
     const headers: Record<string, string> = { ...authHeaders }
-    if (body instanceof FormData) {
+    const isFormData = body && (
+      body instanceof FormData || 
+      (body as any).constructor?.name === 'FormData' || 
+      typeof (body as any).append === 'function'
+    )
+    if (isFormData) {
       delete headers['Content-Type']
     }
 
@@ -86,18 +91,28 @@ export class HttpClient {
   }
 
   static post<T>(endpoint: string, body?: any, options?: RequestInit) {
+    const isFormData = body && (
+      body instanceof FormData || 
+      body.constructor?.name === 'FormData' || 
+      typeof body.append === 'function'
+    )
     return this.request<T>(endpoint, { 
       ...options, 
       method: 'POST', 
-      body: body instanceof FormData ? body : JSON.stringify(body) 
+      body: isFormData ? body : JSON.stringify(body) 
     })
   }
 
   static patch<T>(endpoint: string, body?: any, options?: RequestInit) {
+    const isFormData = body && (
+      body instanceof FormData || 
+      body.constructor?.name === 'FormData' || 
+      typeof body.append === 'function'
+    )
     return this.request<T>(endpoint, { 
       ...options, 
       method: 'PATCH', 
-      body: JSON.stringify(body) 
+      body: isFormData ? body : JSON.stringify(body) 
     })
   }
 

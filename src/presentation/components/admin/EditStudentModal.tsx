@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { X, User, Hash, Phone, MapPin, Calendar, Check } from 'lucide-react'
+import { X, User, Hash, Phone, MapPin, Calendar, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
@@ -28,6 +28,7 @@ export default function EditStudentModal({
   const [loadingGrados, setLoadingGrados] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDniWarning, setShowDniWarning] = useState(false)
 
   const [formData, setFormData] = useState({
     nombre_completo: student.nombre_completo,
@@ -74,7 +75,12 @@ export default function EditStudentModal({
       onSuccess()
       onClose()
     } catch (err: any) {
-      setError(err.message)
+      const errMsg = err.message || '';
+      if (errMsg.toLowerCase().includes('dni') && (errMsg.toLowerCase().includes('taken') || errMsg.toLowerCase().includes('ya existe') || errMsg.toLowerCase().includes('duplicado') || errMsg.toLowerCase().includes('unique') || errMsg.toLowerCase().includes('repetido') || errMsg.toLowerCase().includes('inválido'))) {
+        setShowDniWarning(true)
+      } else {
+        setError(errMsg)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -126,7 +132,10 @@ export default function EditStudentModal({
                 placeholder="8 dígitos"
                 leftIcon={<Hash size={18} />}
                 value={formData.dni}
-                onChange={e => setFormData({...formData, dni: e.target.value})}
+                onChange={e => {
+                  const cleaned = e.target.value.replace(/\D/g, '')
+                  setFormData({...formData, dni: cleaned})
+                }}
               />
               <Input 
                 label="Fecha de Nacimiento"
@@ -183,6 +192,33 @@ export default function EditStudentModal({
           </div>
         </form>
       </div>
+
+      {showDniWarning && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 border border-red-100 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-3xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-md">
+              <AlertTriangle size={32} className="animate-bounce" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-gray-800 tracking-tight">DNI Duplicado o Inválido</h3>
+              <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                El DNI <span className="font-bold text-red-600">"{formData.dni}"</span> ya se encuentra registrado para otro alumno. 
+                Recuerda que el DNI debe ser único, contener exactamente 8 dígitos numéricos y no incluir letras.
+              </p>
+            </div>
+
+            <Button 
+              type="button" 
+              variant="primary" 
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-red-100 active:scale-95 cursor-pointer"
+              onClick={() => setShowDniWarning(false)}
+            >
+              Entendido
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
